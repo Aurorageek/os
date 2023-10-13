@@ -5,7 +5,7 @@
     .globl kern_entry
 kern_entry:
     la sp, bootstacktop
-
+    
     tail kern_init
 
 .section .data

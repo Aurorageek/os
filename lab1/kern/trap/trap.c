@@ -36,6 +36,7 @@ void idt_init(void) {
 /* trap_in_kernel - test if trap happened in kernel */
 bool trap_in_kernel(struct trapframe *tf) {
     return (tf->status & SSTATUS_SPP) != 0;
+    /*SSTATUS_SPP 是一个常量或宏，用于表示 Supervisor Previous Privilege Mode 的位。在RISC-V中，它通常用于指示之前的特权级别，0 表示用户态，1 表示内核态。*/
 }
 
 void print_trapframe(struct trapframe *tf) {
@@ -84,6 +85,8 @@ void print_regs(struct pushregs *gpr) {
 
 void interrupt_handler(struct trapframe *tf) {
     intptr_t cause = (tf->cause << 1) >> 1;
+    static size_t tick_s=0;//计数器
+    static size_t num1=0;//打印次数
     switch (cause) {
         case IRQ_U_SOFT:
             cprintf("User software interrupt\n");
@@ -112,6 +115,17 @@ void interrupt_handler(struct trapframe *tf) {
              *(3)当计数器加到100的时候，我们会输出一个`100ticks`表示我们触发了100次时钟中断，同时打印次数（num）加一
             * (4)判断打印次数，当打印次数为10时，调用<sbi.h>中的关机函数关机
             */
+            clock_set_next_event();// 设置下一次的时钟中断
+            ticks++;
+
+            if(ticks % TICK_NUM == 0){
+                    print_ticks();//当计数器加到100的时候，我们会输出一个`100ticks`表示我们触发了100次时钟中断
+                    num1++;//打印次数+1
+                    if(num1==10){
+                        sbi_shutdown();
+                    }//当打印次数为10时，调用<sbi.h>中的关机函数关机
+            }
+
             break;
         case IRQ_H_TIMER:
             cprintf("Hypervisor software interrupt\n");
@@ -150,6 +164,9 @@ void exception_handler(struct trapframe *tf) {
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器
             */
+            cprintf("Exception type: Illegal instruction\n");
+            cprintf("Ebreak caught at 0x%08x\n", tf->epc);
+            tf->epc += 2;// 更新 tf->epc寄存器,+=2 is correct
             break;
         case CAUSE_BREAKPOINT:
             //断点异常处理
@@ -158,6 +175,9 @@ void exception_handler(struct trapframe *tf) {
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器
             */
+            cprintf("Exception type: Breakpoint");
+            cprintf("Illegal instruction caught at 0x%08x\n",tf->epc);
+            tf->epc += 2;// 更新 tf->epc寄存器
             break;
         case CAUSE_MISALIGNED_LOAD:
             break;
@@ -185,9 +205,11 @@ void exception_handler(struct trapframe *tf) {
 static inline void trap_dispatch(struct trapframe *tf) {
     if ((intptr_t)tf->cause < 0) {
         // interrupts
+        //cprintf("222222");
         interrupt_handler(tf);
     } else {
         // exceptions
+        //cprintf("111111111");
         exception_handler(tf);
     }
 }

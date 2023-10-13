@@ -24,17 +24,30 @@ int kern_init(void) {
 
     print_kerninfo();
 
+    //__asm__ volatile("ebreak");
     // grade_backtrace();
 
     idt_init();  // init interrupt descriptor table
 
+
     // rdtime in mbare mode crashes
+
+
+
+//-----------------------------
+    //__asm__ volatile("ebreak");// breakpoint
+    //__asm__ volatile(".word 0x00000000");// Illegal instruction
+//------------------
+
+
+
     clock_init();  // init clock interrupt
 
     intr_enable();  // enable irq interrupt
     
-    while (1)
-        ;
+    while (1){
+
+    }
 }
 
 void __attribute__((noinline))
